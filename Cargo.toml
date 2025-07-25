@@ -1,0 +1,235 @@
+[package]
+name = "bee-rs"
+version = "0.1.0"
+edition = "2021"
+description = "A Rust library for cryptographic and networking utilities"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/your-org/bee-rs"
+
+[[test]]
+name = "stewardship_test"
+path = "tests/api/stewardship_test.rs"
+
+[[bin]]
+name = "stewardship_example"
+path = "src/bin/stewardship_example.rs"
+
+[dependencies]
+# Core dependencies for encoding and cryptography
+base64 = "0.22"
+cid = "0.11"
+data-encoding = "2.9"
+generic-array = "1.2"
+hex = "0.4"
+k256 = { version = "0.13", features = ["ecdsa", "arithmetic", "std"] }
+ethers-core = ">=2.0.14"
+hex-literal = "0.4"
+thiserror = "1.0"
+dotenv = "0.15.0"
+
+# Multihash and codec dependencies
+multicodec = "0.1"
+multihash = "0.19"
+
+# Serialization and hashing
+
+serde_json = "1.0"
+tiny-keccak = { version = "2.0", features = ["keccak"] }
+lazy_static = "1.4"
+
+# Async and networking dependencies
+futures = "0.3"
+reqwest = { version = "0.12", features = [
+    "json",
+    "rustls-tls",
+], default-features = false }
+tokio = { version = "1.38", features = ["full"] }
+async-trait = "0.1"
+serde = { version = "1.0", features = ["derive"] }
+url = "2.5"
+http = "1.1"
+semver = "1.0"
+bytes = "1.6"
+regex = "1.10"
+tar = "0.4"
+chrono = "0.4"
+tokio-tungstenite = "0.23"
+futures-util = { version = "0.3", features = [
+    "sink",
+] } # Removed invalid `stream` feature
+num-traits = "0.2"
+num-bigint = { version = "0.4", features = ["serde"] }
+
+rustc-hex = "2.1.0"
+sha3 = "0.10"
+
+[dev-dependencies]
+tokio = { version = "1.38", features = ["test-util", "macros"] }
+serial_test = "3.1"
+warp = "0.3"
+tokio-test = "0.4"
+serde_json = "1.0"
+wiremock = "0.6"
+
+
+[[test]]
+name = "status_test"
+path = "tests/api/status_test.rs"
+
+[[test]]
+name = "debug_status_test"
+path = "tests/api/debug_status_test.rs"
+
+[[test]]
+name = "debug_states_test"
+path = "tests/api/debug_states_test.rs"
+
+[[test]]
+name = "debug_balance_test"
+path = "tests/api/debug_balance_test.rs"
+
+[[test]]
+name = "debug_chequebook_test"
+path = "tests/api/debug_chequebook_test.rs"
+
+[[test]]
+name = "debug_connectivity_test"
+path = "tests/api/debug_connectivity_test.rs"
+
+[[test]]
+name = "debug_settlements_test"
+path = "tests/api/debug_settlements_test.rs"
+
+[[test]]
+name = "debug_transactions_test"
+path = "tests/api/debug_transactions_test.rs"
+
+[[test]]
+name = "debug_stamps_test"
+path = "tests/api/debug_stamps_test.rs"
+
+[[test]]
+name = "bytes_test"
+path = "tests/api/bytes_test.rs"
+
+[[test]]
+name = "bzz_test"
+path = "tests/api/bzz_test.rs"
+
+[[test]]
+name = "chunk_test"
+path = "tests/api/chunk_test.rs"
+
+[[test]]
+name = "envelope_test"
+path = "tests/api/envelope_test.rs"
+
+[[test]]
+name = "feed_test"
+path = "tests/api/feed_test.rs"
+
+[[test]]
+name = "grantee_test"
+path = "tests/api/grantee_test.rs"
+
+[[test]]
+name = "gsoc_test"
+path = "tests/api/gsoc_test.rs"
+
+[[test]]
+name = "pinning_test"
+path = "tests/api/pinning_test.rs"
+
+[[test]]
+name = "pss_test"
+path = "tests/api/pss_test.rs"
+
+[[test]]
+name = "rchash_test"
+path = "tests/api/rchash_test.rs"
+
+[[test]]
+name = "soc_test"
+path = "tests/api/soc_test.rs"
+
+
+
+[[bin]]
+name = "status_example"
+path = "src/bin/status_example.rs"
+
+[[bin]]
+name = "debug_status_example"
+path = "src/bin/debug_status_example.rs"
+
+[[bin]]
+name = "debug_states_example"
+path = "src/bin/debug_states_example.rs"
+
+[[bin]]
+name = "debug_balance_example"
+path = "src/bin/debug_balance_example.rs"
+
+[[bin]]
+name = "debug_chequebook_example"
+path = "src/bin/debug_chequebook_example.rs"
+
+[[bin]]
+name = "debug_connectivity_example"
+path = "src/bin/debug_connectivity_example.rs"
+
+
+
+[[bin]]
+name = "debug_transactions_example"
+path = "src/bin/debug_transactions_example.rs"
+
+[[bin]]
+name = "debug_stamps_example"
+path = "src/bin/debug_stamps_example.rs"
+
+[[bin]]
+name = "bytes_example"
+path = "src/bin/bytes_example.rs"
+
+[[bin]]
+name = "bzz_example"
+path = "src/bin/bzz_example.rs"
+
+[[bin]]
+name = "chunk_example"
+path = "src/bin/chunk_example.rs"
+
+[[bin]]
+name = "envelope_example"
+path = "src/bin/envelope_example.rs"
+
+[[bin]]
+name = "feed_example"
+path = "src/bin/feed_example.rs"
+
+[[bin]]
+name = "grantee_example"
+path = "src/bin/grantee_example.rs"
+
+[[bin]]
+name = "gsoc_example"
+path = "src/bin/gsoc_example.rs"
+
+[[bin]]
+name = "pinning_example"
+path = "src/bin/pinning_example.rs"
+
+[[bin]]
+name = "pss_example"
+path = "src/bin/pss_example.rs"
+
+[[bin]]
+name = "rchash_example"
+path = "src/bin/rchash_example.rs"
+
+[[bin]]
+name = "soc_example"
+path = "src/bin/soc_example.rs"
+
+
