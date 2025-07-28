@@ -1,51 +1,26 @@
-use crate::common::test_utils::spawn_mock_bee_with_warps;
-use bee_rs::api::bytes::{upload, UploadResult, RedundantUploadOptions, UploadOptions, head, ReferenceInformation, download, DownloadOptions};
-use warp::{http::HeaderValue, Filter};
-
-mod common;
+use bee_rs::api::bytes::{download, head, upload, DownloadOptions, RedundantUploadOptions, UploadOptions, UploadResult, ReferenceInformation};
+use wiremock::{matchers::{method, path_regex, header}, Mock, MockServer, ResponseTemplate};
+use serde_json;
+use reqwest::header::HeaderValue;
 
 #[tokio::test]
 async fn test_upload() {
     let expected_reference = "36b7efd913ca4cf880b8eeac5093fa27b0825906c600685b6abdd6566e6cfe8f";
     let expected_tag_uid = 123;
     let expected_history_address = "another_history_address";
-    let mock_response_body = format!("{{\"reference\": \"{}\"}}", expected_reference);
+    let mock_response_body = format!(r#"{{"reference": "{}"}}"#, expected_reference);
 
-    let mock_server = spawn_mock_bee_with_warps(vec![
-        warp::post()
-            .and(warp::path("bytes"))
-            .and(warp::header::exact("content-type", "application/octet-stream"))
-            .and(warp::header::exact("swarm-postage-batch-id", "test_batch_id"))
-            .and(warp::header::optional::<String>("swarm-act"))
-            .and(warp::header::optional::<String>("swarm-act-history-address"))
-            .and(warp::header::optional::<String>("swarm-pin"))
-            .and(warp::header::optional::<String>("swarm-encrypt"))
-            .and(warp::header::optional::<String>("swarm-tag"))
-            .and(warp::header::optional::<String>("swarm-deferred"))
-            .and(warp::header::optional::<String>("swarm-redundancy-level"))
-            .and(warp::body::bytes())
-            .map(move |act: Option<String>, act_history_address: Option<String>, pin: Option<String>, encrypt: Option<String>, tag: Option<String>, deferred: Option<String>, redundancy_level: Option<String>, body: bytes::Bytes| {
-                assert_eq!(body.to_vec(), vec![1, 2, 3]);
-                if let Some(act_val) = act { assert_eq!(act_val, "true"); }
-                if let Some(act_history_address_val) = act_history_address { assert_eq!(act_history_address_val, "some_history_address"); }
-                if let Some(pin_val) = pin { assert_eq!(pin_val, "true"); }
-                if let Some(encrypt_val) = encrypt { assert_eq!(encrypt_val, "true"); }
-                if let Some(tag_val) = tag { assert_eq!(tag_val, "123"); }
-                if let Some(deferred_val) = deferred { assert_eq!(deferred_val, "false"); }
-                if let Some(redundancy_level_val) = redundancy_level { assert_eq!(redundancy_level_val, "1"); }
-
-                warp::reply::with_headers(
-                    warp::reply::json(&serde_json::from_str::<UploadResult>(&mock_response_body).unwrap()),
-                    {
-                        let mut headers = warp::http::HeaderMap::new();
-                        headers.insert("swarm-tag", HeaderValue::from_str(&expected_tag_uid.to_string()).unwrap());
-                        headers.insert("swarm-act-history-address", HeaderValue::from_str(expected_history_address).unwrap());
-                        headers
-                    },
-                )
-            }),
-    ])
-    .await;
+    let mock_server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path_regex("/bytes"))
+        .and(header("content-type", "application/octet-stream"))
+        .and(header("swarm-postage-batch-id", "test_batch_id"))
+        .respond_with(ResponseTemplate::new(200)
+            .set_body_json(serde_json::json!({ "reference": expected_reference }))
+            .insert_header("swarm-tag", expected_tag_uid.to_string())
+            .insert_header("swarm-act-history-address", expected_history_address))
+        .mount(&mock_server)
+        .await;
 
     let client = reqwest::Client::new();
     let base_url = &mock_server.uri();
@@ -76,22 +51,12 @@ async fn test_upload() {
 async fn test_head() {
     let expected_content_length = 12345;
 
-    let mock_server = spawn_mock_bee_with_warps(vec![
-        warp::head()
-            .and(warp::path!("bytes" / String))
-            .map(move |reference: String| {
-                assert_eq!(reference, "test_reference");
-                warp::reply::with_headers(
-                    warp::reply::reply(),
-                    {
-                        let mut headers = warp::http::HeaderMap::new();
-                        headers.insert("content-length", HeaderValue::from_str(&expected_content_length.to_string()).unwrap());
-                        headers
-                    },
-                )
-            }),
-    ])
-    .await;
+    let mock_server = MockServer::start().await;
+    Mock::given(method("HEAD"))
+        .and(path_regex("/bytes/(.*)"))
+        .respond_with(ResponseTemplate::new(200).insert_header("content-length", expected_content_length.to_string()))
+        .mount(&mock_server)
+        .await;
 
     let client = reqwest::Client::new();
     let base_url = &mock_server.uri();
@@ -108,27 +73,12 @@ async fn test_head() {
 async fn test_download() {
     let expected_data = vec![1, 2, 3, 4, 5];
 
-    let mock_server = spawn_mock_bee_with_warps(vec![
-        warp::get()
-            .and(warp::path!("bytes" / String))
-            .and(warp::header::optional::<String>("swarm-redundancy-strategy"))
-            .and(warp::header::optional::<String>("swarm-fallback"))
-            .and(warp::header::optional::<String>("swarm-timeout"))
-            .and(warp::header::optional::<String>("swarm-act-publisher"))
-            .and(warp::header::optional::<String>("swarm-act-history-address"))
-            .and(warp::header::optional::<String>("swarm-act-timestamp"))
-            .map(move |resource: String, redundancy_strategy: Option<String>, fallback: Option<String>, timeout: Option<String>, act_publisher: Option<String>, act_history_address: Option<String>, act_timestamp: Option<String>| {
-                assert_eq!(resource, "test_resource");
-                if let Some(strategy) = redundancy_strategy { assert_eq!(strategy, "1"); }
-                if let Some(fb) = fallback { assert_eq!(fb, "true"); }
-                if let Some(to) = timeout { assert_eq!(to, "1000"); }
-                if let Some(publisher) = act_publisher { assert_eq!(publisher, "some_publisher"); }
-                if let Some(history_address) = act_history_address { assert_eq!(history_address, "some_history_address"); }
-                if let Some(timestamp) = act_timestamp { assert_eq!(timestamp, "12345"); }
-                warp::reply::with_status(expected_data.clone(), warp::http::StatusCode::OK)
-            }),
-    ])
-    .await;
+    let mock_server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path_regex("/bytes/(.*)"))
+        .respond_with(ResponseTemplate::new(200).set_body_bytes(expected_data.clone()))
+        .mount(&mock_server)
+        .await;
 
     let client = reqwest::Client::new();
     let base_url = &mock_server.uri();

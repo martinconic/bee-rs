@@ -1,6 +1,3 @@
-// Copyright 2023 IOTA Stiftung
-// SPDX-License-Identifier: Apache-2.0
-
 use bee_rs::bee::Bee;
 use wiremock::{matchers::method, Mock, MockServer, ResponseTemplate};
 

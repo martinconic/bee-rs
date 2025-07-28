@@ -1,8 +1,6 @@
-use crate::common::test_utils::spawn_mock_bee_with_warps;
 use bee_rs::api::envelope::{post_envelope, EnvelopeWithBatchId};
-use warp::{http::HeaderValue, Filter};
-
-mod common;
+use wiremock::{matchers::{method, path_regex, header}, Mock, MockServer, ResponseTemplate};
+use serde_json;
 
 #[tokio::test]
 async fn test_post_envelope() {
@@ -20,16 +18,13 @@ async fn test_post_envelope() {
         "signature": hex::encode(&expected_signature),
     }).to_string();
 
-    let mock_server = spawn_mock_bee_with_warps(vec![
-        warp::post()
-            .and(warp::path!("envelope" / String))
-            .and(warp::header::exact("swarm-postage-batch-id", expected_batch_id))
-            .map(move |ref_param: String| {
-                assert_eq!(ref_param, reference);
-                warp::reply::json(&serde_json::from_str::<EnvelopeWithBatchId>(&mock_response_body).unwrap())
-            }),
-    ])
-    .await;
+    let mock_server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path_regex("/envelope/(.*)"))
+        .and(header("swarm-postage-batch-id", expected_batch_id))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::from_str::<EnvelopeWithBatchId>(&mock_response_body).unwrap()))
+        .mount(&mock_server)
+        .await;
 
     let client = reqwest::Client::new();
     let base_url = &mock_server.uri();

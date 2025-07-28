@@ -1,8 +1,5 @@
-use crate::common::test_utils::spawn_mock_bee_with_warps;
 use bee_rs::api::rchash::rchash;
-use warp::Filter;
-
-mod common;
+use wiremock::{matchers::{method, path_regex}, Mock, MockServer, ResponseTemplate};
 
 #[tokio::test]
 async fn test_rchash() {
@@ -11,17 +8,12 @@ async fn test_rchash() {
     let anchor2 = "anchor2_value";
     let expected_duration = 123.45;
 
-    let mock_server = spawn_mock_bee_with_warps(vec![
-        warp::get()
-            .and(warp::path!("rchash" / u32 / String / String))
-            .map(move |d: u32, a1: String, a2: String| {
-                assert_eq!(d, depth);
-                assert_eq!(a1, anchor1);
-                assert_eq!(a2, anchor2);
-                warp::reply::json(&serde_json::json!({ "durationSeconds": expected_duration }))
-            }),
-    ])
-    .await;
+    let mock_server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path_regex(&format!("/rchash/{}/{}/{}", depth, anchor1, anchor2)))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({ "durationSeconds": expected_duration })))
+        .mount(&mock_server)
+        .await;
 
     let client = reqwest::Client::new();
     let base_url = &mock_server.uri();

@@ -1,6 +1,7 @@
 pub mod status;
 pub mod stewardship;
 pub mod debug;
+pub mod bmt;
 pub mod bytes;
 pub mod bzz;
 pub mod chunk;

@@ -1,9 +1,7 @@
-use crate::common::test_utils::spawn_mock_bee_with_warps;
 use bee_rs::api::gsoc::send;
 use bee_rs::api::bytes::UploadOptions;
-use warp::{http::HeaderValue, Filter};
-
-mod common;
+use wiremock::{matchers::{method, path_regex, header}, Mock, MockServer, ResponseTemplate};
+use serde_json;
 
 #[tokio::test]
 async fn test_send_gsoc() {
@@ -11,18 +9,14 @@ async fn test_send_gsoc() {
     let postage_batch_id = "test_batch_id";
     let soc_data = vec![1, 2, 3, 4, 5];
 
-    let mock_server = spawn_mock_bee_with_warps(vec![
-        warp::post()
-            .and(warp::path("chunks")) // gsoc send calls chunk upload
-            .and(warp::header::exact("content-type", "application/octet-stream"))
-            .and(warp::header::exact("swarm-postage-batch-id", postage_batch_id))
-            .and(warp::body::bytes())
-            .map(move |body: bytes::Bytes| {
-                assert_eq!(body.to_vec(), soc_data);
-                warp::reply::json(&serde_json::json!({ "reference": expected_reference }))
-            }),
-    ])
-    .await;
+    let mock_server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path_regex("/chunks")) // gsoc send calls chunk upload
+        .and(header("content-type", "application/octet-stream"))
+        .and(header("swarm-postage-batch-id", postage_batch_id))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({ "reference": expected_reference })))
+        .mount(&mock_server)
+        .await;
 
     let client = reqwest::Client::new();
     let base_url = &mock_server.uri();

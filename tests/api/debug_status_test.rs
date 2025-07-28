@@ -1,10 +1,12 @@
 use bee_rs::api::debug::status::{BeeDebugClient, BeeMode, DebugStatus, Health, NodeInfo, Readiness, BeeVersions};
-use warp::Filter;
+use wiremock::{matchers::{method, path}, Mock, MockServer, ResponseTemplate};
 
 #[tokio::test]
 async fn test_get_debug_status() {
-    let debug_status_route = warp::path!("status").map(|| {
-        warp::reply::json(&DebugStatus {
+    let mock_server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/status"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(DebugStatus {
             overlay: "test_overlay".to_string(),
             proximity: 1,
             bee_mode: BeeMode::Full,
@@ -18,12 +20,11 @@ async fn test_get_debug_status() {
             is_reachable: true,
             last_synced_block: 1000,
             committed_depth: 10,
-        })
-    });
-    let (addr, server) = warp::serve(debug_status_route).bind_ephemeral(([127, 0, 0, 1], 0));
-    tokio::spawn(server);
+        }))
+        .mount(&mock_server)
+        .await;
 
-    let client = BeeDebugClient::new(&format!("http://{}:{}", addr.ip(), addr.port())).unwrap();
+    let client = BeeDebugClient::new(&mock_server.uri()).unwrap();
     let result = client.get_debug_status().await;
     assert!(result.is_ok());
     let status = result.unwrap();
@@ -33,17 +34,18 @@ async fn test_get_debug_status() {
 
 #[tokio::test]
 async fn test_get_health() {
-    let health_route = warp::path!("health").map(|| {
-        warp::reply::json(&Health {
+    let mock_server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/health"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(Health {
             status: "ok".to_string(),
             version: "1.0.0".to_string(),
             api_version: "1.0.0".to_string(),
-        })
-    });
-    let (addr, server) = warp::serve(health_route).bind_ephemeral(([127, 0, 0, 1], 0));
-    tokio::spawn(server);
+        }))
+        .mount(&mock_server)
+        .await;
 
-    let client = BeeDebugClient::new(&format!("http://{}:{}", addr.ip(), addr.port())).unwrap();
+    let client = BeeDebugClient::new(&mock_server.uri()).unwrap();
     let result = client.get_health().await;
     assert!(result.is_ok());
     let health = result.unwrap();
@@ -53,17 +55,18 @@ async fn test_get_health() {
 
 #[tokio::test]
 async fn test_get_readiness() {
-    let readiness_route = warp::path!("readiness").map(|| {
-        warp::reply::json(&Readiness {
+    let mock_server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/readiness"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(Readiness {
             status: "ready".to_string(),
             version: "1.0.0".to_string(),
             api_version: "1.0.0".to_string(),
-        })
-    });
-    let (addr, server) = warp::serve(readiness_route).bind_ephemeral(([127, 0, 0, 1], 0));
-    tokio::spawn(server);
+        }))
+        .mount(&mock_server)
+        .await;
 
-    let client = BeeDebugClient::new(&format!("http://{}:{}", addr.ip(), addr.port())).unwrap();
+    let client = BeeDebugClient::new(&mock_server.uri()).unwrap();
     let result = client.get_readiness().await;
     assert!(result.is_ok());
     let readiness = result.unwrap();
@@ -72,17 +75,18 @@ async fn test_get_readiness() {
 
 #[tokio::test]
 async fn test_get_node_info() {
-    let node_info_route = warp::path!("node").map(|| {
-        warp::reply::json(&NodeInfo {
+    let mock_server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/node"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(NodeInfo {
             bee_mode: BeeMode::Light,
             chequebook_enabled: false,
             swap_enabled: true,
-        })
-    });
-    let (addr, server) = warp::serve(node_info_route).bind_ephemeral(([127, 0, 0, 1], 0));
-    tokio::spawn(server);
+        }))
+        .mount(&mock_server)
+        .await;
 
-    let client = BeeDebugClient::new(&format!("http://{}:{}", addr.ip(), addr.port())).unwrap();
+    let client = BeeDebugClient::new(&mock_server.uri()).unwrap();
     let result = client.get_node_info().await;
     assert!(result.is_ok());
     let node_info = result.unwrap();
@@ -91,17 +95,18 @@ async fn test_get_node_info() {
 
 #[tokio::test]
 async fn test_is_supported_exact_version() {
-    let health_route = warp::path!("health").map(|| {
-        warp::reply::json(&Health {
+    let mock_server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/health"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(Health {
             status: "ok".to_string(),
             version: "2.4.0-390a402e".to_string(),
             api_version: "7.2.0".to_string(),
-        })
-    });
-    let (addr, server) = warp::serve(health_route).bind_ephemeral(([127, 0, 0, 1], 0));
-    tokio::spawn(server);
+        }))
+        .mount(&mock_server)
+        .await;
 
-    let client = BeeDebugClient::new(&format!("http://{}:{}", addr.ip(), addr.port())).unwrap();
+    let client = BeeDebugClient::new(&mock_server.uri()).unwrap();
     let result = client.is_supported_exact_version().await;
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), true);
@@ -109,17 +114,18 @@ async fn test_is_supported_exact_version() {
 
 #[tokio::test]
 async fn test_is_supported_api_version() {
-    let health_route = warp::path!("health").map(|| {
-        warp::reply::json(&Health {
+    let mock_server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/health"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(Health {
             status: "ok".to_string(),
             version: "2.4.0-390a402e".to_string(),
             api_version: "7.2.0".to_string(),
-        })
-    });
-    let (addr, server) = warp::serve(health_route).bind_ephemeral(([127, 0, 0, 1], 0));
-    tokio::spawn(server);
+        }))
+        .mount(&mock_server)
+        .await;
 
-    let client = BeeDebugClient::new(&format!("http://{}:{}", addr.ip(), addr.port())).unwrap();
+    let client = BeeDebugClient::new(&mock_server.uri()).unwrap();
     let result = client.is_supported_api_version().await;
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), true);
@@ -127,17 +133,18 @@ async fn test_is_supported_api_version() {
 
 #[tokio::test]
 async fn test_get_versions() {
-    let health_route = warp::path!("health").map(|| {
-        warp::reply::json(&Health {
+    let mock_server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/health"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(Health {
             status: "ok".to_string(),
             version: "2.4.0-390a402e".to_string(),
             api_version: "7.2.0".to_string(),
-        })
-    });
-    let (addr, server) = warp::serve(health_route).bind_ephemeral(([127, 0, 0, 1], 0));
-    tokio::spawn(server);
+        }))
+        .mount(&mock_server)
+        .await;
 
-    let client = BeeDebugClient::new(&format!("http://{}:{}", addr.ip(), addr.port())).unwrap();
+    let client = BeeDebugClient::new(&mock_server.uri()).unwrap();
     let result = client.get_versions().await;
     assert!(result.is_ok());
     let versions = result.unwrap();

@@ -70,6 +70,7 @@ warp = "0.3"
 tokio-test = "0.4"
 serde_json = "1.0"
 wiremock = "0.6"
+mockito = "1.2"
 
 
 [[test]]
@@ -105,12 +106,12 @@ name = "debug_transactions_test"
 path = "tests/api/debug_transactions_test.rs"
 
 [[test]]
-name = "debug_stamps_test"
-path = "tests/api/debug_stamps_test.rs"
-
-[[test]]
 name = "bytes_test"
 path = "tests/api/bytes_test.rs"
+
+[[test]]
+name = "debug_stamps_test"
+path = "tests/api/debug_stamps_test.rs"
 
 [[test]]
 name = "bzz_test"
@@ -152,11 +153,9 @@ path = "tests/api/rchash_test.rs"
 name = "soc_test"
 path = "tests/api/soc_test.rs"
 
-
-
-[[bin]]
-name = "status_example"
-path = "src/bin/status_example.rs"
+[[test]]
+name = "bmt_test"
+path = "tests/api/bmt_test.rs"
 
 [[bin]]
 name = "debug_status_example"

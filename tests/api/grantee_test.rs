@@ -1,8 +1,8 @@
-use crate::common::test_utils::spawn_mock_bee_with_warps;
 use bee_rs::api::grantee::{create_grantees, get_grantees, patch_grantees, GetGranteesResult, GranteesResult};
-use warp::{Filter, http::StatusCode};
-
-mod common;
+// Add the `body_json` matcher to the import list
+use wiremock::{matchers::{method, path_regex, header, body_json}, Mock, MockServer, ResponseTemplate};
+use serde_json;
+use std::collections::HashMap;
 
 #[tokio::test]
 async fn test_get_grantees() {
@@ -12,15 +12,12 @@ async fn test_get_grantees() {
         "0xabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd".to_string(),
     ];
 
-    let mock_server = spawn_mock_bee_with_warps(vec![
-        warp::get()
-            .and(warp::path!("grantee" / String))
-            .map(move |ref_param: String| {
-                assert_eq!(ref_param, reference);
-                warp::reply::json(&expected_grantees)
-            }),
-    ])
-    .await;
+    let mock_server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path_regex(format!("/grantee/{}", reference))) // More specific path matching
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({ "grantees": expected_grantees })))
+        .mount(&mock_server)
+        .await;
 
     let client = reqwest::Client::new();
     let base_url = &mock_server.uri();
@@ -42,21 +39,18 @@ async fn test_create_grantees() {
     let expected_reference = "created_reference";
     let expected_history_reference = "created_history_reference";
 
-    let mock_server = spawn_mock_bee_with_warps(vec![
-        warp::post()
-            .and(warp::path("grantee"))
-            .and(warp::header::exact("swarm-postage-batch-id", postage_batch_id))
-            .and(warp::body::json())
-            .map(move |body: serde_json::Value| {
-                let received_grantees: Vec<String> = serde_json::from_value(body["grantees"].clone()).unwrap();
-                assert_eq!(received_grantees, grantees_to_create);
-                warp::reply::json(&serde_json::json!({
-                    "ref": expected_reference,
-                    "historyref": expected_history_reference
-                }))
-            }),
-    ])
-    .await;
+    let mock_server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path_regex("/grantee"))
+        .and(header("swarm-postage-batch-id", postage_batch_id))
+        // Use the `body_json` matcher instead of `.with_body()`
+        .and(body_json(serde_json::json!({ "grantees": grantees_to_create.clone() })))
+        .respond_with(ResponseTemplate::new(201).set_body_json(serde_json::json!({ // Changed to 201 Created for RESTful practice
+            "ref": expected_reference,
+            "historyref": expected_history_reference
+        })))
+        .mount(&mock_server)
+        .await;
 
     let client = reqwest::Client::new();
     let base_url = &mock_server.uri();
@@ -79,25 +73,22 @@ async fn test_patch_grantees() {
     let expected_reference = "patched_reference";
     let expected_history_reference = "patched_history_reference";
 
-    let mock_server = spawn_mock_bee_with_warps(vec![
-        warp::patch()
-            .and(warp::path!("grantee" / String))
-            .and(warp::header::exact("swarm-postage-batch-id", postage_batch_id))
-            .and(warp::header::exact("swarm-act-history-address", history_reference))
-            .and(warp::body::json())
-            .map(move |ref_param: String, body: serde_json::Value| {
-                assert_eq!(ref_param, reference);
-                let received_add: Option<Vec<String>> = serde_json::from_value(body["add"].clone()).unwrap();
-                let received_revoke: Option<Vec<String>> = serde_json::from_value(body["revoke"].clone()).unwrap();
-                assert_eq!(received_add, add_grantees);
-                assert_eq!(received_revoke, revoke_grantees);
-                warp::reply::json(&serde_json::json!({
-                    "ref": expected_reference,
-                    "historyref": expected_history_reference
-                }))
-            }),
-    ])
-    .await;
+    let mock_server = MockServer::start().await;
+    Mock::given(method("PATCH"))
+        .and(path_regex(format!("/grantee/{}", reference))) // More specific path matching
+        .and(header("swarm-postage-batch-id", postage_batch_id))
+        .and(header("swarm-act-history-address", history_reference))
+        // Use the `body_json` matcher instead of `.with_body()`
+        .and(body_json(serde_json::json!({
+            "add": add_grantees,
+            "revoke": revoke_grantees
+        })))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "ref": expected_reference,
+            "historyref": expected_history_reference
+        })))
+        .mount(&mock_server)
+        .await;
 
     let client = reqwest::Client::new();
     let base_url = &mock_server.uri();

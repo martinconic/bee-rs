@@ -1,9 +1,7 @@
-use crate::common::test_utils::spawn_mock_bee_with_warps;
 use bee_rs::api::soc::upload;
 use bee_rs::api::bytes::UploadOptions;
-use warp::{http::HeaderValue, Filter};
-
-mod common;
+use wiremock::{matchers::{method, path_regex, header, query_param}, Mock, MockServer, ResponseTemplate};
+use serde_json;
 
 #[tokio::test]
 async fn test_upload_soc() {
@@ -16,42 +14,19 @@ async fn test_upload_soc() {
     let expected_tag_uid = 123;
     let expected_history_address = "some_history_address_soc";
 
-    let mock_server = spawn_mock_bee_with_warps(vec![
-        warp::post()
-            .and(warp::path!("soc" / String / String))
-            .and(warp::header::exact("content-type", "application/octet-stream"))
-            .and(warp::header::exact("swarm-postage-batch-id", postage_batch_id))
-            .and(warp::query::exact("sig", signature))
-            .and(warp::header::optional::<String>("swarm-act"))
-            .and(warp::header::optional::<String>("swarm-act-history-address"))
-            .and(warp::header::optional::<String>("swarm-pin"))
-            .and(warp::header::optional::<String>("swarm-encrypt"))
-            .and(warp::header::optional::<String>("swarm-tag"))
-            .and(warp::header::optional::<String>("swarm-deferred"))
-            .and(warp::body::bytes())
-            .map(move |owner_param: String, identifier_param: String, act: Option<String>, act_history_address: Option<String>, pin: Option<String>, encrypt: Option<String>, tag: Option<String>, deferred: Option<String>, body: bytes::Bytes| {
-                assert_eq!(owner_param, owner);
-                assert_eq!(identifier_param, identifier);
-                assert_eq!(body.to_vec(), data);
-                if let Some(act_val) = act { assert_eq!(act_val, "true"); }
-                if let Some(act_history_address_val) = act_history_address { assert_eq!(act_history_address_val, "some_history_address_soc"); }
-                if let Some(pin_val) = pin { assert_eq!(pin_val, "true"); }
-                if let Some(encrypt_val) = encrypt { assert_eq!(encrypt_val, "true"); }
-                if let Some(tag_val) = tag { assert_eq!(tag_val, "123"); }
-                if let Some(deferred_val) = deferred { assert_eq!(deferred_val, "false"); }
-
-                warp::reply::with_headers(
-                    warp::reply::json(&serde_json::json!({ "reference": expected_reference })),
-                    {
-                        let mut headers = warp::http::HeaderMap::new();
-                        headers.insert("swarm-tag", HeaderValue::from_str(&expected_tag_uid.to_string()).unwrap());
-                        headers.insert("swarm-act-history-address", HeaderValue::from_str(expected_history_address).unwrap());
-                        headers
-                    },
-                )
-            }),
-    ])
-    .await;
+    let mock_server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path_regex(&format!("/soc/{}/{}", owner, identifier)))
+        .and(header("content-type", "application/octet-stream"))
+        .and(header("swarm-postage-batch-id", postage_batch_id))
+        .and(query_param("sig", signature))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "reference": expected_reference,
+            "tagUid": expected_tag_uid,
+            "historyAddress": expected_history_address
+        })))
+        .mount(&mock_server)
+        .await;
 
     let client = reqwest::Client::new();
     let base_url = &mock_server.uri();

@@ -1,19 +1,20 @@
 use bee_rs::api::debug::chequebook::{BeeDebugChequebookClient, ChequebookAddressResponse, ChequebookBalanceResponse, LastCashoutActionResponse, LastChequesForPeerResponse, LastChequesResponse, Cheque, CashoutResult};
-use warp::Filter;
+use wiremock::{matchers::{method, path_regex}, Mock, MockServer, ResponseTemplate};
 use serde_json;
 use std::collections::HashMap;
 
 #[tokio::test]
 async fn test_get_chequebook_address() {
-    let route = warp::path!("chequebook" / "address").map(|| {
-        warp::reply::json(&ChequebookAddressResponse {
+    let mock_server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path_regex("/chequebook/address"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(ChequebookAddressResponse {
             chequebook_address: "0x1234567890123456789012345678901234567890".to_string(),
-        })
-    });
-    let (addr, server) = warp::serve(route).bind_ephemeral(([127, 0, 0, 1], 0));
-    tokio::spawn(server);
+        }))
+        .mount(&mock_server)
+        .await;
 
-    let client = BeeDebugChequebookClient::new(&format!("http://{}:{}", addr.ip(), addr.port())).unwrap();
+    let client = BeeDebugChequebookClient::new(&mock_server.uri()).unwrap();
     let result = client.get_chequebook_address().await;
     assert!(result.is_ok());
     let response = result.unwrap();
@@ -22,16 +23,17 @@ async fn test_get_chequebook_address() {
 
 #[tokio::test]
 async fn test_get_chequebook_balance() {
-    let route = warp::path!("chequebook" / "balance").map(|| {
-        warp::reply::json(&ChequebookBalanceResponse {
+    let mock_server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path_regex("/chequebook/balance"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(ChequebookBalanceResponse {
             total_balance: "100000000000000000000".to_string(),
             available_balance: "50000000000000000000".to_string(),
-        })
-    });
-    let (addr, server) = warp::serve(route).bind_ephemeral(([127, 0, 0, 1], 0));
-    tokio::spawn(server);
+        }))
+        .mount(&mock_server)
+        .await;
 
-    let client = BeeDebugChequebookClient::new(&format!("http://{}:{}", addr.ip(), addr.port())).unwrap();
+    let client = BeeDebugChequebookClient::new(&mock_server.uri()).unwrap();
     let result = client.get_chequebook_balance().await;
     assert!(result.is_ok());
     let response = result.unwrap();
@@ -41,9 +43,11 @@ async fn test_get_chequebook_balance() {
 
 #[tokio::test]
 async fn test_get_last_cashout_action() {
-    let route = warp::path!("chequebook" / "cashout" / String).map(|peer: String| {
-        warp::reply::json(&LastCashoutActionResponse {
-            peer,
+    let mock_server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path_regex("/chequebook/cashout/(.*)"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(LastCashoutActionResponse {
+            peer: "0x1234567890123456789012345678901234567890123456789012345678901234".to_string(),
             uncashed_amount: "10000000000000000000".to_string(),
             transaction_hash: Some("0x1234567890123456789012345678901234567890123456789012345678901234".to_string()),
             last_cashed_cheque: Some(Cheque {
@@ -56,12 +60,11 @@ async fn test_get_last_cashout_action() {
                 last_payout: "1000000000000000000".to_string(),
                 bounced: false,
             }),
-        })
-    });
-    let (addr, server) = warp::serve(route).bind_ephemeral(([127, 0, 0, 1], 0));
-    tokio::spawn(server);
+        }))
+        .mount(&mock_server)
+        .await;
 
-    let client = BeeDebugChequebookClient::new(&format!("http://{}:{}", addr.ip(), addr.port())).unwrap();
+    let client = BeeDebugChequebookClient::new(&mock_server.uri()).unwrap();
     let result = client.get_last_cashout_action("0x1234567890123456789012345678901234567890123456789012345678901234").await;
     assert!(result.is_ok());
     let response = result.unwrap();
@@ -70,15 +73,16 @@ async fn test_get_last_cashout_action() {
 
 #[tokio::test]
 async fn test_cashout_last_cheque() {
-    let route = warp::path!("chequebook" / "cashout" / String).and(warp::post()).map(|_peer: String| {
-        warp::reply::json(&serde_json::json!({
+    let mock_server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path_regex("/chequebook/cashout/(.*)"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
             "transactionHash": "0x1234567890123456789012345678901234567890123456789012345678901234"
-        }))
-    });
-    let (addr, server) = warp::serve(route).bind_ephemeral(([127, 0, 0, 1], 0));
-    tokio::spawn(server);
+        })))
+        .mount(&mock_server)
+        .await;
 
-    let client = BeeDebugChequebookClient::new(&format!("http://{}:{}", addr.ip(), addr.port())).unwrap();
+    let client = BeeDebugChequebookClient::new(&mock_server.uri()).unwrap();
     let result = client.cashout_last_cheque("0x1234567890123456789012345678901234567890123456789012345678901234", None, None).await;
     assert!(result.is_ok());
     let tx_hash = result.unwrap();
@@ -87,21 +91,22 @@ async fn test_cashout_last_cheque() {
 
 #[tokio::test]
 async fn test_get_last_cheques_for_peer() {
-    let route = warp::path!("chequebook" / "cheque" / String).map(|peer: String| {
-        warp::reply::json(&LastChequesForPeerResponse {
-            peer,
+    let mock_server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path_regex("/chequebook/cheque/(.*)"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(LastChequesForPeerResponse {
+            peer: "0x1234567890123456789012345678901234567890123456789012345678901234".to_string(),
             lastreceived: Some(Cheque {
                 beneficiary: "0x1234567890123456789012345678901234567890".to_string(),
                 chequebook: "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd".to_string(),
                 payout: "1000000000000000000".to_string(),
             }),
             lastsent: None,
-        })
-    });
-    let (addr, server) = warp::serve(route).bind_ephemeral(([127, 0, 0, 1], 0));
-    tokio::spawn(server);
+        }))
+        .mount(&mock_server)
+        .await;
 
-    let client = BeeDebugChequebookClient::new(&format!("http://{}:{}", addr.ip(), addr.port())).unwrap();
+    let client = BeeDebugChequebookClient::new(&mock_server.uri()).unwrap();
     let result = client.get_last_cheques_for_peer("0x1234567890123456789012345678901234567890123456789012345678901234").await;
     assert!(result.is_ok());
     let response = result.unwrap();
@@ -110,8 +115,10 @@ async fn test_get_last_cheques_for_peer() {
 
 #[tokio::test]
 async fn test_get_last_cheques() {
-    let route = warp::path!("chequebook" / "cheque").map(|| {
-        warp::reply::json(&LastChequesResponse {
+    let mock_server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path_regex("/chequebook/cheque"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(LastChequesResponse {
             lastcheques: vec![
                 LastChequesForPeerResponse {
                     peer: "0x1234567890123456789012345678901234567890123456789012345678901234".to_string(),
@@ -123,12 +130,11 @@ async fn test_get_last_cheques() {
                     lastsent: None,
                 },
             ],
-        })
-    });
-    let (addr, server) = warp::serve(route).bind_ephemeral(([127, 0, 0, 1], 0));
-    tokio::spawn(server);
+        }))
+        .mount(&mock_server)
+        .await;
 
-    let client = BeeDebugChequebookClient::new(&format!("http://{}:{}", addr.ip(), addr.port())).unwrap();
+    let client = BeeDebugChequebookClient::new(&mock_server.uri()).unwrap();
     let result = client.get_last_cheques().await;
     assert!(result.is_ok());
     let response = result.unwrap();
@@ -137,15 +143,16 @@ async fn test_get_last_cheques() {
 
 #[tokio::test]
 async fn test_deposit_tokens() {
-    let route = warp::path!("chequebook" / "deposit").and(warp::post()).and(warp::query::query()).map(|_query: HashMap<String, String>| {
-        warp::reply::json(&serde_json::json!({
+    let mock_server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path_regex("/chequebook/deposit"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
             "transactionHash": "0x1234567890123456789012345678901234567890123456789012345678901234"
-        }))
-    });
-    let (addr, server) = warp::serve(route).bind_ephemeral(([127, 0, 0, 1], 0));
-    tokio::spawn(server);
+        })))
+        .mount(&mock_server)
+        .await;
 
-    let client = BeeDebugChequebookClient::new(&format!("http://{}:{}", addr.ip(), addr.port())).unwrap();
+    let client = BeeDebugChequebookClient::new(&mock_server.uri()).unwrap();
     let result = client.deposit_tokens("1000000000000000000", None).await;
     assert!(result.is_ok());
     let tx_hash = result.unwrap();
@@ -154,15 +161,16 @@ async fn test_deposit_tokens() {
 
 #[tokio::test]
 async fn test_withdraw_tokens() {
-    let route = warp::path!("chequebook" / "withdraw").and(warp::post()).and(warp::query::query()).map(|_query: HashMap<String, String>| {
-        warp::reply::json(&serde_json::json!({
+    let mock_server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path_regex("/chequebook/withdraw"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
             "transactionHash": "0x1234567890123456789012345678901234567890123456789012345678901234"
-        }))
-    });
-    let (addr, server) = warp::serve(route).bind_ephemeral(([127, 0, 0, 1], 0));
-    tokio::spawn(server);
+        })))
+        .mount(&mock_server)
+        .await;
 
-    let client = BeeDebugChequebookClient::new(&format!("http://{}:{}", addr.ip(), addr.port())).unwrap();
+    let client = BeeDebugChequebookClient::new(&mock_server.uri()).unwrap();
     let result = client.withdraw_tokens("1000000000000000000", None).await;
     assert!(result.is_ok());
     let tx_hash = result.unwrap();

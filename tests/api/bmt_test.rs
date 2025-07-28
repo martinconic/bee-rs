@@ -1,0 +1,16 @@
+use bee_rs::api::bmt::calculate_chunk_address;
+
+#[test]
+fn test_calculate_chunk_address() {
+    // Example from bee-js:
+    // https://github.com/ethersphere/bee-js/blob/c7706b060560775641660b74627446227021292d/src/chunk/bmt.ts#L100
+    let chunk_content = [
+        0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // span
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, // payload
+        0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20,
+    ];
+    let expected_address = "147714554b6cc7a70d073316b5146875561cd692767c4ff8aa4a031cebc3b613";
+
+    let result = calculate_chunk_address(&chunk_content).unwrap();
+    assert_eq!(hex::encode(result), expected_address);
+}

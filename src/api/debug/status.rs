@@ -46,7 +46,7 @@ pub struct DebugStatus {
     pub bee_mode: BeeMode,
     pub reserve_size: u64,
     pub reserve_size_within_radius: u64,
-    pub pullsync_rate: u32,
+    pub pullsync_rate: f64,
     pub storage_radius: u32,
     pub connected_peers: u32,
     pub neighborhood_size: u32,
@@ -54,6 +54,7 @@ pub struct DebugStatus {
     pub is_reachable: bool,
     pub last_synced_block: u32,
     pub committed_depth: u32,
+    pub is_warming_up: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

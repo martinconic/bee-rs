@@ -1,1 +1,14 @@
+# Compiled output
 /target
+
+# IDE-specific files
+.idea/
+.vscode/
+
+# Local environment files
+.env
+
+# Ignore Cargo's lock file if this is a library.
+# If it's a binary application, you should REMOVE the line below
+# to ensure reproducible builds.
+# Cargo.lock

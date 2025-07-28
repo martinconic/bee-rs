@@ -1,8 +1,6 @@
-use crate::common::test_utils::spawn_mock_bee_with_warps;
 use bee_rs::api::pss::send;
-use warp::{Filter, http::StatusCode};
-
-mod common;
+use wiremock::{matchers::{method, path_regex, query_param, header}, Mock, MockServer, ResponseTemplate};
+use reqwest::StatusCode;
 
 #[tokio::test]
 async fn test_send_pss() {
@@ -12,26 +10,19 @@ async fn test_send_pss() {
     let postage_batch_id = "test_batch_id";
     let recipient = Some("test_recipient");
 
-    let mock_server = spawn_mock_bee_with_warps(vec![
-        warp::post()
-            .and(warp::path!("pss" / "send" / String / String))
-            .and(warp::header::exact("swarm-postage-batch-id", postage_batch_id))
-            .and(warp::query::optional::<String>("recipient"))
-            .and(warp::body::bytes())
-            .map(move |topic_param: String, target_param: String, rec: Option<String>, body: bytes::Bytes| {
-                assert_eq!(topic_param, topic);
-                assert_eq!(target_param, target);
-                assert_eq!(rec, recipient);
-                assert_eq!(body.to_vec(), data);
-                warp::reply::with_status("", StatusCode::OK)
-            }),
-    ])
-    .await;
+    let mock_server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path_regex(&format!("/pss/send/{}/{}", topic, target)))
+        .and(header("swarm-postage-batch-id", postage_batch_id))
+        .and(query_param("recipient", recipient.clone().unwrap()))
+        .respond_with(ResponseTemplate::new(StatusCode::OK))
+        .mount(&mock_server)
+        .await;
 
     let client = reqwest::Client::new();
     let base_url = &mock_server.uri();
 
-    let result = send(&client, base_url, topic, target, data, postage_batch_id, recipient).await;
+    let result = send(&client, base_url, topic, target, data, postage_batch_id, recipient.as_deref()).await;
 
     assert!(result.is_ok());
 }
