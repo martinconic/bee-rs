@@ -1,5 +1,10 @@
-use bee_rs::api::debug::status::{BeeDebugClient, BeeMode, DebugStatus, Health, NodeInfo, Readiness, BeeVersions};
-use wiremock::{matchers::{method, path}, Mock, MockServer, ResponseTemplate};
+use bee_rs::api::debug::status::{
+    BeeDebugClient, BeeMode, BeeVersions, DebugStatus, Health, NodeInfo, Readiness,
+};
+use wiremock::{
+    matchers::{method, path},
+    Mock, MockServer, ResponseTemplate,
+};
 
 #[tokio::test]
 async fn test_get_debug_status() {
@@ -12,7 +17,7 @@ async fn test_get_debug_status() {
             bee_mode: BeeMode::Full,
             reserve_size: 100,
             reserve_size_within_radius: 50,
-            pullsync_rate: 10,
+            pullsync_rate: 10.0,
             storage_radius: 5,
             connected_peers: 2,
             neighborhood_size: 3,
@@ -20,6 +25,7 @@ async fn test_get_debug_status() {
             is_reachable: true,
             last_synced_block: 1000,
             committed_depth: 10,
+            is_warming_up: false,
         }))
         .mount(&mock_server)
         .await;
